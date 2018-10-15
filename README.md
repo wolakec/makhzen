@@ -14,7 +14,7 @@ go get github.com/wolakec/makhzen/store
 ```
 
 ### Usage
-```
+```go
 package main
 
 import (
