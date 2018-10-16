@@ -3,6 +3,8 @@ Makhzen is an in-memory data store allowing you to save string values against a 
 
 The word "makhzen" means "warehouse" in arabic (مخزن‎).
 
+[![Build Status](https://travis-ci.com/wolakec/makhzen.svg?branch=master)](https://travis-ci.com/wolakec/makhzen)
+
 ### Prerequisites
 This project depends upon the following:
   - Golang (https://wwww.golang.org)
