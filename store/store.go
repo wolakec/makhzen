@@ -9,14 +9,10 @@ func (s *Store) Set(k string, v string) string {
 	return v
 }
 
-func (s *Store) Get(k string) (string, bool) {
-	item, exists := s.items[k]
+func (s *Store) GetValue(k string) (string, bool) {
+	v, ok := s.items[k]
 
-	if exists {
-		return item, true
-	}
-
-	return "", false
+	return v, ok
 }
 
 func New() *Store {
