@@ -7,7 +7,10 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
+
+	"github.com/wolakec/makhzen/registry"
 )
 
 type StubItemStore struct {
@@ -24,6 +27,19 @@ func (s *StubItemStore) Set(key string, v string) string {
 	return v
 }
 
+type StubRegistry struct {
+	Nodes []registry.Node
+}
+
+func (r *StubRegistry) AddNode(node registry.Node) registry.Node {
+	r.Nodes = append(r.Nodes, node)
+	return node
+}
+
+func (r *StubRegistry) GetNodes() []registry.Node {
+	return r.Nodes
+}
+
 func TestGETItems(t *testing.T) {
 	store := StubItemStore{
 		map[string]string{
@@ -31,7 +47,10 @@ func TestGETItems(t *testing.T) {
 			"Platform": "mobile",
 		},
 	}
-	server := &ItemServer{&store}
+	reg := StubRegistry{
+		Nodes: []registry.Node{},
+	}
+	server := NewMakhzenServer(&store, &reg)
 
 	t.Run("returns value for 'Region' key", func(t *testing.T) {
 		request := newGetValueRequest("Region")
@@ -76,7 +95,10 @@ func TestPUTItems(t *testing.T) {
 	store := StubItemStore{
 		map[string]string{},
 	}
-	server := &ItemServer{&store}
+	reg := StubRegistry{
+		Nodes: []registry.Node{},
+	}
+	server := NewMakhzenServer(&store, &reg)
 
 	t.Run("returns accepted on PUT", func(t *testing.T) {
 		request := newPutValueRequest("LoadBalancer", "10.0.0.1:3030")
@@ -119,7 +141,10 @@ func TestPUTItemsPersistsData(t *testing.T) {
 	store := StubItemStore{
 		map[string]string{},
 	}
-	server := &ItemServer{&store}
+	reg := StubRegistry{
+		Nodes: []registry.Node{},
+	}
+	server := NewMakhzenServer(&store, &reg)
 
 	t.Run("returns persisted value europe on GET", func(t *testing.T) {
 		request := newPutValueRequest("Region", "europe")
@@ -134,6 +159,111 @@ func TestPUTItemsPersistsData(t *testing.T) {
 		want := "europe"
 
 		assertResponseBody(t, got, want)
+	})
+}
+
+func TestGETNodes(t *testing.T) {
+
+	t.Run("it returns 200 on /nodes", func(t *testing.T) {
+		store := StubItemStore{
+			map[string]string{},
+		}
+		reg := StubRegistry{
+			Nodes: []registry.Node{},
+		}
+		server := NewMakhzenServer(&store, &reg)
+
+		request, _ := http.NewRequest(http.MethodGet, "/nodes", nil)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+		assertStatus(t, response.Code, http.StatusOK)
+	})
+
+	t.Run("it returns a list of nodes on /nodes", func(t *testing.T) {
+		wanted := []registry.Node{
+			registry.Node{
+				Id:      "1",
+				Address: "1234",
+			},
+			registry.Node{
+				Id:      "2",
+				Address: "5678",
+			},
+		}
+		store := StubItemStore{
+			map[string]string{},
+		}
+		reg := StubRegistry{
+			Nodes: wanted,
+		}
+		server := NewMakhzenServer(&store, &reg)
+
+		request, _ := http.NewRequest(http.MethodGet, "/nodes", nil)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		var got []registry.Node
+
+		err := json.NewDecoder(response.Body).Decode(&got)
+
+		if err != nil {
+			t.Fatalf("Unable to parse response from server '%s' into slice of Node, '%v'", response.Body, err)
+		}
+
+		if !reflect.DeepEqual(got, wanted) {
+			t.Errorf("got %v, want %v", got, wanted)
+		}
+
+		assertStatus(t, response.Code, http.StatusOK)
+	})
+}
+
+func TestPOSTNode(t *testing.T) {
+	t.Run("it returns a 201", func(t *testing.T) {
+		store := StubItemStore{
+			map[string]string{},
+		}
+		reg := StubRegistry{
+			Nodes: []registry.Node{},
+		}
+		server := NewMakhzenServer(&store, &reg)
+
+		request, _ := http.NewRequest(http.MethodPost, "/nodes", nil)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		assertStatus(t, response.Code, http.StatusCreated)
+	})
+
+	t.Run("it returns the created node", func(t *testing.T) {
+		store := StubItemStore{
+			map[string]string{},
+		}
+		reg := StubRegistry{
+			Nodes: []registry.Node{},
+		}
+
+		server := NewMakhzenServer(&store, &reg)
+
+		sentNode := registry.Node{
+			Address: "localhost:3000",
+		}
+
+		b, err := json.Marshal(sentNode)
+
+		if err != nil {
+			t.Errorf("Unable to unmarshal %v %v", sentNode, err)
+		}
+
+		request, _ := http.NewRequest(http.MethodPost, "/nodes", bytes.NewBuffer(b))
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		assertStatus(t, response.Code, http.StatusCreated)
 	})
 }
 
