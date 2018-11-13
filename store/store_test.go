@@ -25,11 +25,11 @@ func TestSetUpdate(t *testing.T) {
 	}
 }
 
-func TestGet(t *testing.T) {
+func TestGetValue(t *testing.T) {
 	var s = New()
 	s.Set("some-key", "1234")
 
-	got, _ := s.Get("some-key")
+	got, _ := s.GetValue("some-key")
 	want := "1234"
 
 	if got != want {
@@ -37,9 +37,9 @@ func TestGet(t *testing.T) {
 	}
 }
 
-func TestGetOnEmptyKey(t *testing.T) {
+func TestGetValueOnEmptyKey(t *testing.T) {
 	var s = New()
-	_, got := s.Get("some-key")
+	_, got := s.GetValue("some-key")
 	want := false
 
 	if got != want {
