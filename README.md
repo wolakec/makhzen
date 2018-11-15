@@ -3,8 +3,8 @@ Makhzen is a distributed in-memory data store allowing you to save string values
 
 Values sent to one instance are asynchronously sent to other Makhzen instances, allowing you to retrieve the saved values from other instances. Makhzen provides AP from the CAP theorem, this means:
 
-	* Availability - the cluster is able to tolerate node failures
-	* Parition tolerance - the cluster can continue to function during a network partion that renders nodes unreachable
+* Availability - the cluster is able to tolerate node failures
+* Parition tolerance - the cluster can continue to function during a network partion that renders nodes unreachable
 
 The word "makhzen" means "warehouse" in arabic (مخزن‎).
 
