@@ -31,7 +31,7 @@ To run Makhzen cluster, start up each instance with the following command, each 
 go run main.go -port=3000 -cluster=http://127.0.0.1:3001,http://127.0.0.1:3002
 ```
 
-For example, to start up a cluster of three instances, you can run the following command, each in a seperate terminal tab/window.
+For example, to start up a cluster of three instances, you can run the following commands, each in a seperate terminal tab/window.
 ```
 go run main.go -port=3001 -cluster=http://127.0.0.1:3002,http://127.0.0.1:3003
 go run main.go -port=3002 -cluster=http://127.0.0.1:3003,http://127.0.0.1:3001
