@@ -5,12 +5,44 @@ import (
 	"testing"
 )
 
+type BroadcasterSpy struct {
+	noCalls int
+}
+
+func (b *BroadcasterSpy) SendMessage(key string, value string, addr string) error {
+	b.noCalls = b.noCalls + 1
+
+	return nil
+}
+
+func TestNewReturnsRegistry(t *testing.T) {
+	t.Run("Test New returns Registry containing added nodes", func(t *testing.T) {
+		a := []string{"127.0.0.1:3001", "127.0.0.1:3002"}
+
+		r := New(a)
+
+		got := r.GetNodes()
+
+		want := []Node{
+			{
+				Address: "127.0.0.1:3001",
+			},
+			{
+				Address: "127.0.0.1:3002",
+			},
+		}
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	})
+}
+
 func TestAddNodeReturnsValue(t *testing.T) {
 	t.Run("Test AddNode returns node with address 1234", func(t *testing.T) {
 		r := &Registry{}
 
 		newNode := r.AddNode(Node{
-			Id:      "1337",
 			Address: "1234",
 		})
 		got := newNode.Address
@@ -25,7 +57,6 @@ func TestAddNodeReturnsValue(t *testing.T) {
 		r := &Registry{}
 
 		newNode := r.AddNode(Node{
-			Id:      "1337",
 			Address: "192168",
 		})
 		got := newNode.Address
@@ -33,6 +64,53 @@ func TestAddNodeReturnsValue(t *testing.T) {
 
 		if got != want {
 			t.Errorf("got %v, want %s", got, want)
+		}
+	})
+}
+
+func TestBroadcast(t *testing.T) {
+	t.Run("Test broadcast sends 1 message", func(t *testing.T) {
+		broadcaster := BroadcasterSpy{}
+		r := &Registry{
+			Nodes: []Node{
+				{
+					Address: "127.0.0.1:4000",
+				},
+			},
+			Broadcaster: &broadcaster,
+		}
+
+		r.Broadcast("key", "val")
+
+		expectedCalls := 1
+		got := broadcaster.noCalls
+
+		if got != expectedCalls {
+			t.Errorf("expected %d calls, got %d", expectedCalls, got)
+		}
+	})
+
+	t.Run("Test broadcast sends 2 messages", func(t *testing.T) {
+		broadcaster := BroadcasterSpy{}
+		r := &Registry{
+			Nodes: []Node{
+				{
+					Address: "127.0.0.1:4000",
+				},
+				{
+					Address: "127.0.0.1:4002",
+				},
+			},
+			Broadcaster: &broadcaster,
+		}
+
+		r.Broadcast("key", "val")
+
+		expectedCalls := 2
+		got := broadcaster.noCalls
+
+		if got != expectedCalls {
+			t.Errorf("expected %d calls, got %d", expectedCalls, got)
 		}
 	})
 }
@@ -55,11 +133,9 @@ func TestGetNodes(t *testing.T) {
 		r := &Registry{
 			Nodes: []Node{
 				Node{
-					Id:      "1337",
 					Address: "192168",
 				},
 				Node{
-					Id:      "1338",
 					Address: "1234",
 				},
 			},
@@ -68,11 +144,9 @@ func TestGetNodes(t *testing.T) {
 		got := r.GetNodes()
 		want := []Node{
 			Node{
-				Id:      "1337",
 				Address: "192168",
 			},
 			Node{
-				Id:      "1338",
 				Address: "1234",
 			},
 		}
@@ -88,13 +162,11 @@ func TestGetNodes(t *testing.T) {
 		}
 
 		r.AddNode(Node{
-			Id:      "1337",
 			Address: "192168",
 		})
 
 		got := r.GetNodes()
 		want := []Node{Node{
-			Id:      "1337",
 			Address: "192168",
 		}}
 
@@ -109,22 +181,18 @@ func TestGetNodes(t *testing.T) {
 		}
 
 		r.AddNode(Node{
-			Id:      "1",
 			Address: "1234",
 		})
 		r.AddNode(Node{
-			Id:      "2",
 			Address: "5678",
 		})
 
 		got := r.GetNodes()
 		want := []Node{
 			Node{
-				Id:      "1",
 				Address: "1234",
 			},
 			Node{
-				Id:      "2",
 				Address: "5678",
 			},
 		}
@@ -138,33 +206,27 @@ func TestGetNodes(t *testing.T) {
 		r := &Registry{
 			Nodes: []Node{
 				Node{
-					Id:      "1",
 					Address: "1234",
 				},
 			},
 		}
 
 		r.AddNode(Node{
-			Id:      "2",
 			Address: "5678",
 		})
 		r.AddNode(Node{
-			Id:      "3",
 			Address: "910",
 		})
 
 		got := r.GetNodes()
 		want := []Node{
 			Node{
-				Id:      "1",
 				Address: "1234",
 			},
 			Node{
-				Id:      "2",
 				Address: "5678",
 			},
 			Node{
-				Id:      "3",
 				Address: "910",
 			},
 		}

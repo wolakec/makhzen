@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/wolakec/makhzen/broadcaster"
 	"github.com/wolakec/makhzen/registry"
 )
 
@@ -28,6 +29,7 @@ type ItemBody struct {
 type NodeRegistry interface {
 	AddNode(node registry.Node) registry.Node
 	GetNodes() []registry.Node
+	Broadcast(key string, value string)
 }
 
 func NewMakhzenServer(store ItemStore, registry NodeRegistry) *MakhzenServer {
@@ -40,6 +42,7 @@ func NewMakhzenServer(store ItemStore, registry NodeRegistry) *MakhzenServer {
 
 	router.Handle("/nodes", http.HandlerFunc(s.nodesHandler))
 	router.Handle("/items/", http.HandlerFunc(s.itemsHandler))
+	router.Handle("/message", http.HandlerFunc(s.messageHandler))
 
 	s.Handler = router
 
@@ -64,6 +67,27 @@ func (s *MakhzenServer) getNodes(w http.ResponseWriter, r *http.Request) {
 
 func (s *MakhzenServer) createNode(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
+}
+
+func (s *MakhzenServer) messageHandler(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+
+	b, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var msg broadcaster.Message
+	err = json.Unmarshal(b, &msg)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s.Store.Set(msg.Key, msg.Value)
+
+	log.Printf("recieved message from node: %s, key: %s, value: %s", r.RemoteAddr, msg.Key, msg.Value)
 }
 
 func (s *MakhzenServer) itemsHandler(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +118,8 @@ func (s *MakhzenServer) updateItem(w http.ResponseWriter, r *http.Request, key s
 
 	v := s.Store.Set(key, item.Value)
 	log.Printf("PUT - key %s, value %s", key, v)
+
+	s.Registry.Broadcast(key, item.Value)
 
 	fmt.Fprint(w, v)
 }
