@@ -8,6 +8,8 @@ Values sent to one instance are asynchronously sent to other Makhzen instances, 
 
 The word "makhzen" means "warehouse" in arabic (مخزن‎).
 
+[![Build Status](https://travis-ci.com/wolakec/makhzen.svg?branch=master)](https://travis-ci.com/wolakec/makhzen)
+
 ### Limitations
 - Very rudimentary and not for use in production
 - Makhzen is not currently thread safe
