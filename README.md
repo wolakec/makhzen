@@ -23,8 +23,8 @@ To install the package run the following command in the root directory:
 go build main.go
 ```
 
-### Running a Makzen cluster
-To run Makzen cluster, start up each instance with the following command, each on it's own port, supplying the hosts of the other instances in the cluster argument. 
+### Running a Makhzen cluster
+To run Makhzen cluster, start up each instance with the following command, each on it's own port, supplying the hosts of the other instances in the cluster argument. 
 ```
 go run main.go -port=3000 -cluster=http://127.0.0.1:3001,http://127.0.0.1:3002
 ```
