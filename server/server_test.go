@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/wolakec/makhzen/registry"
@@ -28,7 +29,8 @@ func (s *StubItemStore) Set(key string, v string) string {
 }
 
 type StubRegistry struct {
-	Nodes []registry.Node
+	Nodes            []registry.Node
+	broadcasterCalls int
 }
 
 func (r *StubRegistry) AddNode(node registry.Node) registry.Node {
@@ -38,6 +40,10 @@ func (r *StubRegistry) AddNode(node registry.Node) registry.Node {
 
 func (r *StubRegistry) GetNodes() []registry.Node {
 	return r.Nodes
+}
+
+func (r *StubRegistry) Broadcast(key string, value string) {
+	r.broadcasterCalls = r.broadcasterCalls + 1
 }
 
 func TestGETItems(t *testing.T) {
@@ -137,6 +143,111 @@ func TestPUTItems(t *testing.T) {
 	})
 }
 
+func TestBroadcastOnPut(t *testing.T) {
+	store := StubItemStore{
+		map[string]string{},
+	}
+	reg := StubRegistry{
+		Nodes: []registry.Node{},
+	}
+	server := NewMakhzenServer(&store, &reg)
+
+	t.Run("calls broadcast on PUT", func(t *testing.T) {
+		request := newPutValueRequest("Region", "europe")
+		response := httptest.NewRecorder()
+		server.ServeHTTP(response, request)
+
+		request = newPutValueRequest("VPC", "iz5689")
+		response = httptest.NewRecorder()
+		server.ServeHTTP(response, request)
+
+		expectedCalls := 2
+		if reg.broadcasterCalls != expectedCalls {
+			t.Errorf("broadcast was called %d times, expected %d", reg.broadcasterCalls, expectedCalls)
+		}
+	})
+}
+
+func TestPOSTMessage(t *testing.T) {
+	store := StubItemStore{
+		map[string]string{},
+	}
+	reg := StubRegistry{
+		Nodes: []registry.Node{},
+	}
+	server := NewMakhzenServer(&store, &reg)
+
+	t.Run("POST message returns 200", func(t *testing.T) {
+
+		request := newPostMessageRequest("user", "test")
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		got := response.Code
+		want := http.StatusOK
+
+		assertStatus(t, got, want)
+	})
+
+	t.Run("POST message stores value", func(t *testing.T) {
+
+		wantKey := "new-key"
+		wantValue := "server-5890"
+		request := newPostMessageRequest(wantKey, wantValue)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		got, ok := store.GetValue(wantKey)
+
+		if ok == false {
+			t.Errorf("key: %s does not exist", wantKey)
+		}
+
+		if got != wantValue {
+			t.Errorf("incorrect value - got: %s, wanted: %s", got, wantValue)
+		}
+	})
+
+	t.Run("POST message updates value", func(t *testing.T) {
+
+		wantKey := "new-key"
+		wantValue := "new_value"
+		request := newPostMessageRequest(wantKey, wantValue)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		got, ok := store.GetValue(wantKey)
+
+		if ok == false {
+			t.Errorf("key: %s does not exist", wantKey)
+		}
+
+		if got != wantValue {
+			t.Errorf("incorrect value - got: %s, wanted: %s", got, wantValue)
+		}
+	})
+}
+
+func newPostMessageRequest(key string, value string) *http.Request {
+	payload := fmt.Sprintf(`
+			{
+				"key": "%s",
+				"value": "%s"
+			}
+		`, key, value)
+
+	request, err := http.NewRequest(http.MethodPost, "/message", strings.NewReader(payload))
+
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	return request
+}
+
 func TestPUTItemsPersistsData(t *testing.T) {
 	store := StubItemStore{
 		map[string]string{},
@@ -183,11 +294,9 @@ func TestGETNodes(t *testing.T) {
 	t.Run("it returns a list of nodes on /nodes", func(t *testing.T) {
 		wanted := []registry.Node{
 			registry.Node{
-				Id:      "1",
 				Address: "1234",
 			},
 			registry.Node{
-				Id:      "2",
 				Address: "5678",
 			},
 		}

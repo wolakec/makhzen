@@ -1,7 +1,17 @@
 # Makhzen
-Makhzen is an in-memory data store allowing you to save string values against a key. This is a project to help me to learn Golang and hopefully play around with some interesting things (like distributed computing)
+Makhzen is a distributed in-memory data store allowing you to save string values against a key. The purpose of this project is to learn more about golang and distributed systems.
+
+Values sent to one instance are asynchronously sent to other Makhzen instances, allowing you to retrieve the saved values from other instances. Makhzen provides AP from the CAP theorem, this means:
+
+	* Availability - the cluster is able to tolerate node failures
+	* Parition tolerance - the cluster can continue to function during a network partion that renders nodes unreachable
 
 The word "makhzen" means "warehouse" in arabic (مخزن‎).
+
+### Limitations
+- Very rudimentary and not for use in production
+- Makhzen is not currently thread safe
+- Makhzen can currently only store strings
 
 ### Prerequisites
 This project depends upon the following:
@@ -13,10 +23,17 @@ To install the package run the following command in the root directory:
 go build main.go
 ```
 
-### Running Makzen
-To run Makzen run the following command, optionally supplying a port argument. The default port is 5000.
+### Running a Makzen cluster
+To run Makzen cluster, start up each instance with the following command, each on it's own port, supplying the hosts of the other instances in the cluster argument. 
 ```
-go run main.go -port=3000
+go run main.go -port=3000 -cluster=http://127.0.0.1:3001,http://127.0.0.1:3002
+```
+
+For example, to start up a cluster of three instances, you can run the following command, each in a seperate terminal tab/window.
+```
+go run main.go -port=3001 -cluster=http://127.0.0.1:3002,http://127.0.0.1:3003
+go run main.go -port=3002 -cluster=http://127.0.0.1:3003,http://127.0.0.1:3001
+go run main.go -port=3003 -cluster=http://127.0.0.1:3001,http://127.0.0.1:3002
 ```
 
 ### Setting a value
@@ -35,7 +52,3 @@ curl http://localhost:3000/items/region
 
 ### Response
 The response is currently being sent as simple text (Will change this to JSON at some point)
-
-### Limitations
-- Makhzen is not currently thread safe
-- Makhzen can currently only store strings
